@@ -83,7 +83,7 @@ export default function CotizadorPage() {
               variant="ghost"
               size="sm"
               className="text-white hover:bg-green-700 hover:text-white"
-              onClick={() => (window.location.href = "/")}
+              onClick={() => (window.location.href = "https://advancedn.mx/")}
             >
               ← Volver al inicio
             </Button>
