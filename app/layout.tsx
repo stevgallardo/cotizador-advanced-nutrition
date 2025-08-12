@@ -14,8 +14,11 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "COTIZADOR | Advanced Nutrition Products",
-  description: "Cotizador de productos Advanced Nutrition hecho por Jonathan Gallardo",
+  title: "Cotizador Advanced Nutrition",
+  description: "Herramienta para cotizar productos Advanced Nutrition",
+  icons: {
+    icon: "app/favicon.ico",
+  },
 };
 
 export default function RootLayout({
