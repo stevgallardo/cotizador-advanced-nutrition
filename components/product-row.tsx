@@ -1,5 +1,6 @@
 "use client"
 
+import type { SyntheticEvent } from "react"
 import { motion } from "framer-motion"
 import { Minus, Plus } from "lucide-react"
 import { Card } from "@/components/ui/card"
@@ -45,6 +46,14 @@ export function ProductRow({
     onQuantityChange(num)
   }
 
+  // 🔧 Arreglo para Vercel (Linux: case-sensitive)
+  const imageKey = String(product.code).trim().toLowerCase().replace(/\s+/g, "-")
+  const imageSrc = `/${imageKey}.png`
+  const handleImgError = (e: SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.onerror = null
+    e.currentTarget.src = "/logo-advanced-nutrition.png" // fallback en /public
+  }
+
   return (
     <motion.div
       whileHover={{ scale: 1.01 }}
@@ -74,7 +83,8 @@ export function ProductRow({
             <div className="flex flex-col items-center gap-2">
               <div className="size-28 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center border border-green-200">
                 <img
-                  src={`/${product.code}.png`}
+                  src={imageSrc}
+                  onError={handleImgError}
                   alt={`Producto ${product.name}`}
                   className="w-full h-full object-contain rounded"
                   loading="lazy"
@@ -99,7 +109,8 @@ export function ProductRow({
           <div className="hidden md:flex md:col-span-1 md:order-2 md:pr-4">
             <div className="shrink-0 size-16 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center border border-green-200">
               <img
-                src={`/${product.code}.png`}
+                src={imageSrc}
+                onError={handleImgError}
                 alt={`Producto ${product.name}`}
                 className="w-full h-full object-contain rounded"
                 loading="lazy"
