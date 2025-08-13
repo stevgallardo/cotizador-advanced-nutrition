@@ -25,11 +25,18 @@ export interface Totals {
   totalPieces: number
 }
 
+// Descuentos porcentuales por tipo
 const CLIENT_TYPE_DISCOUNTS = {
   publico: 0,
-  consumidor: 0.3,
+  consumidor: 0.4,   // Consumidor ahora 40%
   inversionista: 0.4,
 }
+
+// Ajuste fijo que se **suma al precio** por unidad (solo para "consumidor")
+const CONSUMIDOR_ADD_BY_CODE: Record<string, number> = {
+  NS: 179, // Nutrasana
+}
+const CONSUMIDOR_ADD_DEFAULT = 50 // Resto de productos
 
 export function useQuoteState(catalog: Product[]) {
   const [items, setItems] = useState<QuoteState>({})
@@ -59,17 +66,28 @@ export function useQuoteState(catalog: Product[]) {
     localStorage.setItem("cotizador-state", JSON.stringify(state))
   }, [items, clientType, clientName, searchTerm])
 
-  // Calcular precio unitario según tipo de cliente
-  const calcUnitPrice = useCallback((product: Product, type: keyof typeof CLIENT_TYPE_DISCOUNTS) => {
-    const discount = CLIENT_TYPE_DISCOUNTS[type]
-    return product.pricePublic * (1 - discount)
-  }, [])
+  // Calcular precio unitario:
+  // 1) aplicar % de descuento
+  // 2) si es "consumidor", **sumar** $50 (o $179 si es NS)
+  const calcUnitPrice = useCallback(
+    (product: Product, type: keyof typeof CLIENT_TYPE_DISCOUNTS) => {
+      const discount = CLIENT_TYPE_DISCOUNTS[type]
+      const base = product.pricePublic * (1 - discount)
+
+      if (type === "consumidor") {
+        const add = CONSUMIDOR_ADD_BY_CODE[product.code] ?? CONSUMIDOR_ADD_DEFAULT
+        const withAdd = base + add
+        return Math.max(0, Math.round(withAdd * 100) / 100)
+      }
+
+      return Math.max(0, Math.round(base * 100) / 100)
+    },
+    []
+  )
 
   // Actualizar cantidad
   const updateQuantity = useCallback((productCode: string, quantity: number) => {
-    // Validar que sea entero >= 0
     const validQuantity = Math.max(0, Math.floor(quantity))
-
     setItems((prev) => ({
       ...prev,
       [productCode]: {
@@ -144,11 +162,12 @@ export function useQuoteState(catalog: Product[]) {
       clientType === "inversionista"
         ? "Inversionista (-40%)"
         : clientType === "consumidor"
-          ? "Consumidor (-30%)"
+          ? "Consumidor (-40% y +$50 al precio; NS: +$179)"
           : "Público"
 
     const quoteText = [
       "=== COTIZACIÓN ADVANCED N. ===",
+      `Cliente: ${clientName || "Sin especificar"}`,
       `Tipo de Cliente: ${clientTypeLabel}`,
       "",
       ...activeItems,
@@ -164,7 +183,7 @@ export function useQuoteState(catalog: Product[]) {
     } catch (error) {
       console.error("Error copying to clipboard:", error)
     }
-  }, [items, clientType, catalog, calcUnitPrice, totals])
+  }, [items, clientType, clientName, catalog, calcUnitPrice, totals])
 
   // Exportar CSV
   const exportCSV = useCallback(() => {
@@ -187,25 +206,20 @@ export function useQuoteState(catalog: Product[]) {
       clientType === "inversionista"
         ? "Inversionista (-40%)"
         : clientType === "consumidor"
-          ? "Consumidor (-30%)"
+          ? "Consumidor (-40% y +$50 al precio; NS: +$179)"
           : "Público"
 
-    // Crear contenido CSV
     const csvContent = [
-      // Información del cliente
       `Cliente,${clientName || "Sin especificar"}`,
       `Tipo de Cliente,${clientTypeLabel}`,
       `Fecha,${new Date().toLocaleDateString("es-MX")}`,
       "",
-      // Encabezados de productos
       "Código,Nombre,Cantidad,Precio Unitario,Subtotal,Puntos",
-      // Productos
       ...activeItems.map(
         (item) =>
           `${item.codigo},${item.nombre},${item.cantidad},${item.precioUnitario.toFixed(2)},${item.subtotal.toFixed(2)},${item.puntos}`,
       ),
       "",
-      // Totales
       `TOTAL,,,,$${totals.total.toFixed(2)},${totals.points}`,
       `PRODUCTOS ACTIVOS,,,,${totals.activeProducts},`,
       `PIEZAS TOTALES,,,,${totals.totalPieces},`,

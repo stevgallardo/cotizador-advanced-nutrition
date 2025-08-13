@@ -32,13 +32,16 @@ const PRODUCT_CATALOG = [
   { code: "SA", name: "STRESANA", pricePublic: 490, points: 19.4 },
 ]
 
+// Tipos para el selector (solo UI)
 const CLIENT_TYPES = [
   { id: "inversionista", label: "Inversionista", discount: 0.4 },
-  { id: "consumidor", label: "Consumidor", discount: 0.3 },
-  { id: "publico", label: "Público", discount: 0 },
-]
+  { id: "consumidor",    label: "Consumidor",    discount: 0.4 }, // regla extra (+$50 / NS +$179) está en el hook
+  { id: "publico",       label: "Público",       discount: 0 },
+] as const
 
-export default function CotizadorPage() {
+type ClientTypeIds = typeof CLIENT_TYPES[number]["id"]
+
+export default function Page() {
   const {
     items,
     clientType,
@@ -54,6 +57,7 @@ export default function CotizadorPage() {
     totals,
     copyQuote,
     exportCSV,
+    calcUnitPrice, // 👈 importante: lo traemos del hook
   } = useQuoteState(PRODUCT_CATALOG)
 
   const [copied, setCopied] = useState(false)
@@ -98,7 +102,6 @@ export default function CotizadorPage() {
           className="bg-green border-b border-green-100 w-full"
         >
           <div className="w-full px-4 pt-8 pb-4 flex flex-col items-center">
-            {/* Título en Card con fondo igual al resumen */}
             <Card className="max-w-xl w-full mx-auto border-green-200 shadow-xl bg-gradient-to-br from-white to-green-50/30">
               <CardHeader className="pb-0">
                 <CardTitle className="text-center text-4xl md:text-5xl font-bold text-green-700 mb-2">Cotizador</CardTitle>
@@ -132,7 +135,7 @@ export default function CotizadorPage() {
                             key={type.id}
                             variant={clientType === type.id ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setClientType(type.id as "inversionista" | "consumidor" | "publico")}
+                            onClick={() => setClientType(type.id as ClientTypeIds)}
                             className={`transition-all duration-200 ${
                               clientType === type.id
                                 ? "bg-green-600 hover:bg-green-700 text-white"
@@ -140,7 +143,11 @@ export default function CotizadorPage() {
                             }`}
                           >
                             {type.label}
-                            {type.discount > 0 && (
+                            {/* Badge simplificado:
+                                - Consumidor: NO badge
+                                - Inversionista: solo -40%
+                                - Público: sin badge */}
+                            {type.id !== "consumidor" && type.discount > 0 && (
                               <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-700">
                                 -{Math.round(type.discount * 100)}%
                               </Badge>
@@ -221,17 +228,18 @@ export default function CotizadorPage() {
                             >
                               <ProductRow
                                 product={product}
-                                clientType={clientType}
+                                clientType={clientType as "publico" | "consumidor" | "inversionista"}
                                 quantity={items[product.code]?.quantity || 0}
                                 active={items[product.code]?.active || false}
                                 onQuantityChange={(qty) => updateQuantity(product.code, qty)}
                                 onToggleActive={() => toggleActive(product.code)}
+                                calcUnitPrice={calcUnitPrice} // 👈 aquí va!
                               />
                             </motion.div>
                           ))}
                         </AnimatePresence>
                       </div>
-                      {/* Caja de total de puntos, solo una vez */}
+                      {/* Total de puntos */}
                       <div className="p-6">
                         <span className="font-bold text-orange-700 hidden lg:inline">Total puntos: {totals.points}</span>
                       </div>
@@ -281,7 +289,7 @@ export default function CotizadorPage() {
           </div>
         </footer>
 
-        {/* Resumen - Mobile (sticky bottom) */}
+        {/* Resumen - Mobile */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-green-200 p-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -326,7 +334,6 @@ export default function CotizadorPage() {
           </motion.div>
         </div>
 
-        {/* Espaciado para el resumen móvil */}
         <div className="lg:hidden h-20" />
       </div>
     </TooltipProvider>
